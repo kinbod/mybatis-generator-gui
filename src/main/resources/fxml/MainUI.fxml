@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.*?>
-<?import javafx.scene.text.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
-<?import java.lang.*?>
+<?import javafx.scene.Cursor?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.collections.*?>
-<?import com.zzg.mybatis.generator.model.*?>
-
+<?import javafx.scene.text.Font?>
+<?import java.lang.*?>
 <BorderPane prefHeight="613.0" prefWidth="918.0" stylesheets="@../style.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.zzg.mybatis.generator.controller.MainUIController">
     <top>
         <VBox>
@@ -54,8 +50,8 @@
                                       <ColumnConstraints hgrow="SOMETIMES" maxWidth="688.0" minWidth="10.0" prefWidth="170.0" />
                                       <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="688.0" minWidth="74.0" prefWidth="76.0" />
                                       <ColumnConstraints hgrow="SOMETIMES" maxWidth="688.0" minWidth="10.0" prefWidth="166.0" />
-                              <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="688.0" minWidth="10.0" prefWidth="111.0" />
-                              <ColumnConstraints hgrow="SOMETIMES" maxWidth="688.0" minWidth="10.0" prefWidth="116.0" />
+                              <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="688.0" minWidth="10.0" prefWidth="129.0" />
+                              <ColumnConstraints hgrow="SOMETIMES" maxWidth="688.0" minWidth="10.0" prefWidth="95.0" />
                                   </columnConstraints>
                                   <rowConstraints>
                                       <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
@@ -75,7 +71,7 @@
                                               <Insets left="5.0" right="5.0" />
                                           </GridPane.margin>
                                       </TextField>
-                                      <Label text="Java POJO 类名" GridPane.rowIndex="1" />
+                                      <Label text="Java实体类名" GridPane.rowIndex="1" />
                               <HBox alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="1" GridPane.valignment="CENTER">
                                  <children>
                                             <TextField fx:id="domainObjectNameField" prefHeight="27.0" prefWidth="154.0" promptText="Person" GridPane.columnIndex="1" GridPane.rowIndex="2">
@@ -128,7 +124,7 @@
                                        </styleClass></Button>
                                           </children>
                                       </HBox>
-                                      <Label text="Java POJO包名" GridPane.rowIndex="4" />
+                                      <Label text="实体类名包名" GridPane.rowIndex="4" />
                                         <TextField fx:id="modelTargetPackage" prefHeight="27.0" prefWidth="152.0" promptText="com.example.model" GridPane.columnIndex="1" GridPane.rowIndex="4">
                                             <HBox.margin>
                                                 <Insets right="5.0" />
@@ -142,7 +138,7 @@
                                  <GridPane.margin>
                                     <Insets left="5.0" />
                                  </GridPane.margin></TextField>
-                                      <Label text="DAO接口包名" GridPane.rowIndex="5" />
+                                      <Label text="接口包名" GridPane.rowIndex="5" />
                                         <TextField fx:id="daoTargetPackage" prefHeight="27.0" prefWidth="248.0" promptText="com.example.mapper" GridPane.columnIndex="1" GridPane.rowIndex="5">
                                             <HBox.margin>
                                                 <Insets right="5.0" />
@@ -156,7 +152,7 @@
                                  <GridPane.margin>
                                     <Insets left="5.0" />
                                  </GridPane.margin></TextField>
-                                      <Label text="映射文件包名" GridPane.rowIndex="6" />
+                                      <Label text="映射XML文件包名" GridPane.rowIndex="6" />
                                         <TextField fx:id="mapperTargetPackage" prefHeight="27.0" prefWidth="248.0" promptText="com.example" GridPane.columnIndex="1" GridPane.rowIndex="6">
                                             <HBox.margin>
                                                 <Insets right="5.0" />
@@ -203,7 +199,7 @@
                                        </styleClass></Button>
                                  </children>
                               </HBox>
-                              <Label text="DAO名称(选填)" GridPane.columnIndex="4" GridPane.rowIndex="5">
+                              <Label text="自定义接口名称(选填)" GridPane.columnIndex="4" GridPane.rowIndex="5">
                                  <padding>
                                     <Insets left="5.0" />
                                  </padding>

@@ -14,9 +14,9 @@ import org.slf4j.LoggerFactory;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class NewConnectionController extends BaseFXController {
+public class DbConnectionController extends BaseFXController {
 
-	private static final Logger _LOG = LoggerFactory.getLogger(NewConnectionController.class);
+	private static final Logger _LOG = LoggerFactory.getLogger(DbConnectionController.class);
 
 	@FXML
 	private TextField nameField;
@@ -35,6 +35,8 @@ public class NewConnectionController extends BaseFXController {
 	@FXML
 	private ChoiceBox<String> dbTypeChoice;
 	private MainUIController mainUIController;
+	private boolean isUpdate = false;
+	private Integer primayKey;
 
 
 	@Override
@@ -48,7 +50,7 @@ public class NewConnectionController extends BaseFXController {
 			return;
 		}
 		try {
-			ConfigHelper.saveDatabaseConfig(config.getName(), config);
+			ConfigHelper.saveDatabaseConfig(this.isUpdate, primayKey, config);
 			getDialogStage().close();
 			mainUIController.loadLeftDBTree();
 		} catch (Exception e) {
@@ -64,8 +66,6 @@ public class NewConnectionController extends BaseFXController {
 			return;
 		}
 		try {
-			String url = DbUtil.getConnectionUrlWithSchema(config);
-			System.out.println(url);
 			DbUtil.getConnection(config);
 			AlertUtil.showInfoAlert("连接成功");
 		} catch (Exception e) {
@@ -107,6 +107,19 @@ public class NewConnectionController extends BaseFXController {
 			return null;
 		}
 		return config;
+	}
+
+	public void setConfig(DatabaseConfig config) {
+		isUpdate = true;
+		primayKey = config.getId(); // save id for update config
+		nameField.setText(config.getName());
+		hostField.setText(config.getHost());
+		portField.setText(config.getPort());
+		userNameField.setText(config.getUsername());
+		passwordField.setText(config.getPassword());
+		encodingChoice.setValue(config.getEncoding());
+		dbTypeChoice.setValue(config.getDbType());
+		schemaField.setText(config.getSchema());
 	}
 
 }

@@ -1,6 +1,5 @@
 package com.zzg.mybatis.generator.controller;
 
-import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException;
 import com.zzg.mybatis.generator.bridge.MybatisGeneratorBridge;
 import com.zzg.mybatis.generator.model.DatabaseConfig;
 import com.zzg.mybatis.generator.model.GeneratorConfig;
@@ -30,12 +29,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URL;
+import java.sql.SQLRecoverableException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
-
-import static org.junit.Assert.assertNotNull;
 
 public class MainUIController extends BaseFXController {
 
@@ -96,7 +94,7 @@ public class MainUIController extends BaseFXController {
         dbImage.setFitWidth(40);
         connectionLabel.setGraphic(dbImage);
         connectionLabel.setOnMouseClicked(event -> {
-            NewConnectionController controller = (NewConnectionController) loadFXMLPage("新建数据库连接", FXMLPage.NEW_CONNECTION, false);
+            DbConnectionController controller = (DbConnectionController) loadFXMLPage("新建数据库连接", FXMLPage.NEW_CONNECTION, false);
             controller.setMainUIController(this);
             controller.showDialogStage();
         });
@@ -122,20 +120,26 @@ public class MainUIController extends BaseFXController {
                 if (level == 1) {
                     final ContextMenu contextMenu = new ContextMenu();
                     MenuItem item1 = new MenuItem("关闭连接");
-                    item1.setOnAction(event1 -> {
-                        treeItem.getChildren().clear();
-                    });
-                    MenuItem item2 = new MenuItem("删除连接");
-                    item2.setOnAction(event1 -> {
+                    item1.setOnAction(event1 -> treeItem.getChildren().clear());
+	                MenuItem item2 = new MenuItem("编辑连接");
+	                item2.setOnAction(event1 -> {
+		                DatabaseConfig selectedConfig = (DatabaseConfig) treeItem.getGraphic().getUserData();
+		                DbConnectionController controller = (DbConnectionController) loadFXMLPage("编辑数据库连接", FXMLPage.NEW_CONNECTION, false);
+		                controller.setMainUIController(this);
+		                controller.setConfig(selectedConfig);
+		                controller.showDialogStage();
+	                });
+                    MenuItem item3 = new MenuItem("删除连接");
+                    item3.setOnAction(event1 -> {
                         DatabaseConfig selectedConfig = (DatabaseConfig) treeItem.getGraphic().getUserData();
                         try {
-                            ConfigHelper.deleteDatabaseConfig(selectedConfig.getName());
+                            ConfigHelper.deleteDatabaseConfig(selectedConfig);
                             this.loadLeftDBTree();
                         } catch (Exception e) {
                             AlertUtil.showErrorAlert("Delete connection failed! Reason: " + e.getMessage());
                         }
                     });
-                    contextMenu.getItems().addAll(item1, item2);
+                    contextMenu.getItems().addAll(item1, item2, item3);
                     cell.setContextMenu(contextMenu);
                 }
                 if (event.getClickCount() == 2) {
@@ -158,7 +162,7 @@ public class MainUIController extends BaseFXController {
                                     children.add(newTreeItem);
                                 }
                             }
-                        } catch (CommunicationsException e) {
+                        } catch (SQLRecoverableException e) {
                             _LOG.error(e.getMessage(), e);
                             AlertUtil.showErrorAlert("连接超时");
                         } catch (Exception e) {
@@ -182,9 +186,8 @@ public class MainUIController extends BaseFXController {
     void loadLeftDBTree() {
         TreeItem rootTreeItem = leftDBTree.getRoot();
         rootTreeItem.getChildren().clear();
-        List<DatabaseConfig> dbConfigs = null;
         try {
-            dbConfigs = ConfigHelper.loadDatabaseConfig();
+            List<DatabaseConfig> dbConfigs = ConfigHelper.loadDatabaseConfig();
             for (DatabaseConfig dbConfig : dbConfigs) {
                 TreeItem<String> treeItem = new TreeItem<>();
                 treeItem.setValue(dbConfig.getName());
@@ -237,6 +240,7 @@ public class MainUIController extends BaseFXController {
 		try {
             bridge.generate();
         } catch (Exception e) {
+			e.printStackTrace();
             AlertUtil.showErrorAlert(e.getMessage());
         }
     }
@@ -258,12 +262,16 @@ public class MainUIController extends BaseFXController {
 
 	@FXML
     public void saveGeneratorConfig() {
-        TextInputDialog dialog = new TextInputDialog("保存配置");
+        TextInputDialog dialog = new TextInputDialog("");
         dialog.setTitle("保存当前配置");
         dialog.setContentText("请输入配置名称");
         Optional<String> result = dialog.showAndWait();
         if (result.isPresent()) {
             String name = result.get();
+            if (StringUtils.isEmpty(name)) {
+                AlertUtil.showErrorAlert("名称不能为空");
+                return;
+            }
             _LOG.info("user choose name: {}", name);
             try {
                 GeneratorConfig generatorConfig = getGeneratorConfigFromUI();

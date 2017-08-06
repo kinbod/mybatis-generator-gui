@@ -39,16 +39,18 @@ public class MybatisGeneratorBridge {
     private List<IgnoredColumn> ignoredColumns;
 
     private List<ColumnOverride> columnOverrides;
+	/**
+	 * The Context will share between all controller to be a the mybatis generator configuration collector
+	 */
+	private static Configuration configuration = new Configuration();
+	private static Context context = new Context(ModelType.CONDITIONAL);
+
+	static {
+		configuration.addContext(context);
+		context.addProperty("javaFileEncoding", "UTF-8");
+	}
 
     public MybatisGeneratorBridge() {
-        init();
-    }
-
-    private void init() {
-        Configuration config = new Configuration();
-        Context context = new Context(ModelType.CONDITIONAL);
-	    context.addProperty("javaFileEncoding", "UTF-8");
-	    config.addContext(context);
     }
 
     public void setGeneratorConfig(GeneratorConfig generatorConfig) {
@@ -60,13 +62,10 @@ public class MybatisGeneratorBridge {
     }
 
     public void generate() throws Exception {
-        Configuration config = new Configuration();
-        String connectorLibPath = ConfigHelper.findConnectorLibPath(selectedDatabaseConfig.getDbType());
-		_LOG.info("connectorLibPath: {}", connectorLibPath);
-        config.addClasspathEntry(connectorLibPath);
-        Context context = new Context(ModelType.CONDITIONAL);
-        config.addContext(context);
-        // Table config
+	    String connectorLibPath = ConfigHelper.findConnectorLibPath(selectedDatabaseConfig.getDbType());
+	    _LOG.info("connectorLibPath: {}", connectorLibPath);
+	    configuration.addClasspathEntry(connectorLibPath);
+        // Table configuration
         TableConfiguration tableConfig = new TableConfiguration(context);
         tableConfig.setTableName(generatorConfig.getTableName());
         tableConfig.setDomainObjectName(generatorConfig.getDomainObjectName());
@@ -101,7 +100,7 @@ public class MybatisGeneratorBridge {
         JavaModelGeneratorConfiguration modelConfig = new JavaModelGeneratorConfiguration();
         modelConfig.setTargetPackage(generatorConfig.getModelPackage());
         modelConfig.setTargetProject(generatorConfig.getProjectFolder() + "/" + generatorConfig.getModelPackageTargetFolder());
-        // Mapper config
+        // Mapper configuration
         SqlMapGeneratorConfiguration mapperConfig = new SqlMapGeneratorConfiguration();
         mapperConfig.setTargetPackage(generatorConfig.getMappingXMLPackage());
         mapperConfig.setTargetProject(generatorConfig.getProjectFolder() + "/" + generatorConfig.getMappingXMLTargetFolder());
@@ -137,10 +136,13 @@ public class MybatisGeneratorBridge {
         
         // limit/offset插件
         if (generatorConfig.isOffsetLimit()) {
-            PluginConfiguration pluginConfiguration = new PluginConfiguration();
-            pluginConfiguration.addProperty("type", "com.zzg.mybatis.generator.plugins.MySQLLimitPlugin");
-            pluginConfiguration.setConfigurationType("com.zzg.mybatis.generator.plugins.MySQLLimitPlugin");
-            context.addPluginConfiguration(pluginConfiguration);
+            if (DbType.MySQL.name().equals(selectedDatabaseConfig.getDbType())
+		            || DbType.PostgreSQL.name().equals(selectedDatabaseConfig.getDbType())) {
+                PluginConfiguration pluginConfiguration = new PluginConfiguration();
+                pluginConfiguration.addProperty("type", "com.zzg.mybatis.generator.plugins.MySQLLimitPlugin");
+                pluginConfiguration.setConfigurationType("com.zzg.mybatis.generator.plugins.MySQLLimitPlugin");
+                context.addPluginConfiguration(pluginConfiguration);
+            }
         }
         context.setTargetRuntime("MyBatis3");
 
@@ -148,12 +150,15 @@ public class MybatisGeneratorBridge {
         Set<String> fullyqualifiedTables = new HashSet<>();
         Set<String> contexts = new HashSet<>();
         ShellCallback shellCallback = new DefaultShellCallback(true); // override=true
-        MyBatisGenerator myBatisGenerator = new MyBatisGenerator(config, shellCallback, warnings);
+        MyBatisGenerator myBatisGenerator = new MyBatisGenerator(configuration, shellCallback, warnings);
         myBatisGenerator.generate(progressCallback, contexts, fullyqualifiedTables);
     }
 
+	public static Context getContext() {
+		return context;
+	}
 
-    public void setProgressCallback(ProgressCallback progressCallback) {
+	public void setProgressCallback(ProgressCallback progressCallback) {
         this.progressCallback = progressCallback;
     }
 
