@@ -13,6 +13,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -27,6 +30,7 @@ import org.mybatis.generator.config.IgnoredColumn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.io.File;
 import java.net.URL;
 import java.sql.SQLRecoverableException;
@@ -55,7 +59,7 @@ public class MainUIController extends BaseFXController {
     @FXML
     private TextField domainObjectNameField;
     @FXML
-    private TextField generateKeysField;	//添加输入框
+    private TextField generateKeysField;	//主键ID
     @FXML
     private TextField modelTargetProject;
     @FXML
@@ -71,11 +75,27 @@ public class MainUIController extends BaseFXController {
     @FXML
     private CheckBox commentCheckBox;
     @FXML
+	private CheckBox overrideXML;
+    @FXML
     private CheckBox needToStringHashcodeEquals;
+    @FXML
+    private CheckBox forUpdateCheckBox;
+    @FXML
+    private CheckBox annotationDAOCheckBox;
+    @FXML
+    private CheckBox useTableNameAliasCheckbox;
     @FXML
     private CheckBox annotationCheckBox;
     @FXML
     private CheckBox useActualColumnNamesCheckbox;
+    @FXML
+    private CheckBox useExample;
+    @FXML
+    private CheckBox useDAOExtendStyle;
+    @FXML
+    private CheckBox useSchemaPrefix;
+    @FXML
+    private CheckBox jsr310Support;
     @FXML
     private TreeView<String> leftDBTree;
     // Current selected databaseConfig
@@ -87,7 +107,8 @@ public class MainUIController extends BaseFXController {
 
     private List<ColumnOverride> columnOverrides;
 
-
+    @FXML
+    private ChoiceBox<String> encodingChoice;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -145,6 +166,9 @@ public class MainUIController extends BaseFXController {
                     cell.setContextMenu(contextMenu);
                 }
                 if (event.getClickCount() == 2) {
+                    if(treeItem == null) {
+                        return ;
+                    }
                     treeItem.setExpanded(true);
                     if (level == 1) {
                         System.out.println("index: " + leftDBTree.getSelectionModel().getSelectedIndex());
@@ -177,13 +201,29 @@ public class MainUIController extends BaseFXController {
                         this.tableName = tableName;
                         tableNameField.setText(tableName);
                         domainObjectNameField.setText(MyStringUtils.dbStringToCamelStyle(tableName));
+                        mapperName.setText(domainObjectNameField.getText().concat("DAO"));
                     }
                 }
             });
             return cell;
         });
         loadLeftDBTree();
-    }
+		setTooltip();
+		//默认选中第一个，否则如果忘记选择，没有对应错误提示
+        encodingChoice.getSelectionModel().selectFirst();
+	}
+
+	private void setTooltip() {
+		encodingChoice.setTooltip(new Tooltip("生成文件的编码，必选"));
+		generateKeysField.setTooltip(new Tooltip("insert时可以返回主键ID"));
+		offsetLimitCheckBox.setTooltip(new Tooltip("是否要生成分页查询代码"));
+		commentCheckBox.setTooltip(new Tooltip("使用数据库的列注释作为实体类字段名的Java注释 "));
+		useActualColumnNamesCheckbox.setTooltip(new Tooltip("是否使用数据库实际的列名作为实体类域的名称"));
+		useTableNameAliasCheckbox.setTooltip(new Tooltip("在Mapper XML文件中表名使用别名，并且列全部使用as查询"));
+		overrideXML.setTooltip(new Tooltip("重新生成时把原XML文件覆盖，否则是追加"));
+        useDAOExtendStyle.setTooltip(new Tooltip("将通用接口方法放在公共接口中，DAO接口留空"));
+        forUpdateCheckBox.setTooltip(new Tooltip("在Select语句中增加for update后缀"));
+	}
 
     void loadLeftDBTree() {
         TreeItem rootTreeItem = leftDBTree.getRoot();
@@ -300,9 +340,18 @@ public class MainUIController extends BaseFXController {
         generatorConfig.setDomainObjectName(domainObjectNameField.getText());
         generatorConfig.setOffsetLimit(offsetLimitCheckBox.isSelected());
         generatorConfig.setComment(commentCheckBox.isSelected());
+        generatorConfig.setOverrideXML(overrideXML.isSelected());
         generatorConfig.setNeedToStringHashcodeEquals(needToStringHashcodeEquals.isSelected());
+        generatorConfig.setUseTableNameAlias(useTableNameAliasCheckbox.isSelected());
+        generatorConfig.setNeedForUpdate(forUpdateCheckBox.isSelected());
+        generatorConfig.setAnnotationDAO(annotationDAOCheckBox.isSelected());
         generatorConfig.setAnnotation(annotationCheckBox.isSelected());
         generatorConfig.setUseActualColumnNames(useActualColumnNamesCheckbox.isSelected());
+        generatorConfig.setEncoding(encodingChoice.getValue());
+        generatorConfig.setUseExample(useExample.isSelected());
+        generatorConfig.setUseDAOExtendStyle(useDAOExtendStyle.isSelected());
+        generatorConfig.setUseSchemaPrefix(useSchemaPrefix.isSelected());
+        generatorConfig.setJsr310Support(jsr310Support.isSelected());
         return generatorConfig;
     }
 
@@ -315,6 +364,7 @@ public class MainUIController extends BaseFXController {
         daoTargetProject.setText(generatorConfig.getDaoTargetFolder());
         mapperTargetPackage.setText(generatorConfig.getMappingXMLPackage());
         mappingTargetProject.setText(generatorConfig.getMappingXMLTargetFolder());
+        encodingChoice.setValue(generatorConfig.getEncoding());
     }
 
     @FXML
@@ -387,4 +437,15 @@ public class MainUIController extends BaseFXController {
         return true;
     }
 
+    @FXML
+    public void openTargetFolder() {
+        GeneratorConfig generatorConfig = getGeneratorConfigFromUI();
+        String projectFolder = generatorConfig.getProjectFolder();
+        try {
+            Desktop.getDesktop().browse(new File(projectFolder).toURI());
+        }catch (Exception e) {
+            AlertUtil.showErrorAlert("打开目录失败，请检查目录是否填写正确" + e.getMessage());
+        }
+
+    }
 }

@@ -1,5 +1,6 @@
 package com.zzg.mybatis.generator.util;
 
+import com.zzg.mybatis.generator.exception.DbDriverLoadingException;
 import com.zzg.mybatis.generator.model.DatabaseConfig;
 import com.zzg.mybatis.generator.model.DbType;
 import com.zzg.mybatis.generator.model.UITableColumnVO;
@@ -18,34 +19,22 @@ public class DbUtil {
     private static final Logger _LOG = LoggerFactory.getLogger(DbUtil.class);
     private static final int DB_CONNECTION_TIMEOUTS_SECONDS = 1;
 
-    private static Map<DbType, Driver> drivers;
-
-	static {
-		drivers = new HashMap<>();
-		List<String> driverJars = ConfigHelper.getAllJDBCDriverJarPaths();
-		ClassLoader classloader = ClassloaderUtility.getCustomClassloader(driverJars);
-		DbType[] dbTypes = DbType.values();
-		for (DbType dbType : dbTypes) {
-			try {
-				Class clazz = Class.forName(dbType.getDriverClass(), true, classloader);
-				Driver driver = (Driver) clazz.newInstance();
-				_LOG.info("load driver class: {}", driver);
-				drivers.put(dbType, driver);
-			} catch (Exception e) {
-				_LOG.error("load driver error");
-			}
-		}
-	}
+    private static Map<DbType, Driver> drivers = new HashMap<>();
 
     public static Connection getConnection(DatabaseConfig config) throws ClassNotFoundException, SQLException {
-        String url = getConnectionUrlWithSchema(config);
+		DbType dbType = DbType.valueOf(config.getDbType());
+		if (drivers.get(dbType) == null){
+			loadDbDriver(dbType);
+		}
+
+		String url = getConnectionUrlWithSchema(config);
 	    Properties props = new Properties();
 
 	    props.setProperty("user", config.getUsername()); //$NON-NLS-1$
 	    props.setProperty("password", config.getPassword()); //$NON-NLS-1$
 
 		DriverManager.setLoginTimeout(DB_CONNECTION_TIMEOUTS_SECONDS);
-	    Connection connection = drivers.get(DbType.valueOf(config.getDbType())).connect(url, props);
+	    Connection connection = drivers.get(dbType).connect(url, props);
         _LOG.info("getConnection, connection url: {}", connection);
         return connection;
     }
@@ -75,7 +64,9 @@ public class DbUtil {
 		    } 
 		    else {
 			    // rs = md.getTables(null, config.getUsername().toUpperCase(), null, null);
-				rs = md.getTables(null, "%", "%", new String[] {"TABLE", "VIEW"});			//针对 postgresql 的左侧数据表显示
+
+
+				rs = md.getTables(config.getSchema(), null, "%", new String[] {"TABLE", "VIEW"});			//针对 postgresql 的左侧数据表显示
 		    }
 		    while (rs.next()) {
 			    tables.add(rs.getString(3));
@@ -114,4 +105,21 @@ public class DbUtil {
         return connectionUrl;
     }
 
+	/**
+	 * 加载数据库驱动
+	 * @param dbType 数据库类型
+	 */
+	private static void loadDbDriver(DbType dbType){
+		List<String> driverJars = ConfigHelper.getAllJDBCDriverJarPaths();
+		ClassLoader classloader = ClassloaderUtility.getCustomClassloader(driverJars);
+		try {
+			Class clazz = Class.forName(dbType.getDriverClass(), true, classloader);
+			Driver driver = (Driver) clazz.newInstance();
+			_LOG.info("load driver class: {}", driver);
+			drivers.put(dbType, driver);
+		} catch (Exception e) {
+			_LOG.error("load driver error", e);
+			throw new DbDriverLoadingException("找不到"+dbType.getConnectorJarFile()+"驱动");
+		}
+	}
 }
