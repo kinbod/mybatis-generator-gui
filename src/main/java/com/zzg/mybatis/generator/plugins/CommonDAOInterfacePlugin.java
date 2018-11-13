@@ -30,6 +30,10 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
     public CommonDAOInterfacePlugin() {
         shellCallback = new DefaultShellCallback(false);
     }
+    
+    private boolean isUseExample() {
+    	return "true".equals(getProperties().getProperty("useExample"));
+	}
 
     @Override
     public List<GeneratedJavaFile> contextGenerateAdditionalJavaFiles(IntrospectedTable introspectedTable) {
@@ -51,13 +55,17 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
             mapperInterface.addJavaDocLine(" * " + "DAO公共基类，由MybatisGenerator自动生成请勿修改");
             mapperInterface.addJavaDocLine(" * " + "@param <Model> The Model Class 这里是泛型不是Model类");
             mapperInterface.addJavaDocLine(" * " + "@param <PK> The Primary Key Class 如果是无主键，则可以用Model来跳过，如果是多主键则是Key类");
-            mapperInterface.addJavaDocLine(" * " + "@param <E> The Example Class");
+			if (isUseExample()) {
+				mapperInterface.addJavaDocLine(" * " + "@param <E> The Example Class");
+			}
             mapperInterface.addJavaDocLine(" */");
 
             FullyQualifiedJavaType daoBaseInterfaceJavaType = mapperInterface.getType();
             daoBaseInterfaceJavaType.addTypeArgument(new FullyQualifiedJavaType("Model"));
             daoBaseInterfaceJavaType.addTypeArgument(new FullyQualifiedJavaType("PK extends Serializable"));
-            daoBaseInterfaceJavaType.addTypeArgument(new FullyQualifiedJavaType("E"));
+			if (isUseExample()) {
+				daoBaseInterfaceJavaType.addTypeArgument(new FullyQualifiedJavaType("E"));
+			}
 
             if (!this.methods.isEmpty()) {
                 for (Method method : methods) {
@@ -114,13 +122,14 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
             primaryKeyTypeJavaType = baseModelJavaType;
         }
         daoSuperType.addTypeArgument(primaryKeyTypeJavaType);
+		interfaze.addImportedType(primaryKeyTypeJavaType);
 
-        String exampleType = introspectedTable.getExampleType();
-        FullyQualifiedJavaType exampleTypeJavaType = new FullyQualifiedJavaType(exampleType);
-        daoSuperType.addTypeArgument(exampleTypeJavaType);
-
-        interfaze.addImportedType(primaryKeyTypeJavaType);
-        interfaze.addImportedType(exampleTypeJavaType);
+		if (isUseExample()) {
+			String exampleType = introspectedTable.getExampleType();
+			FullyQualifiedJavaType exampleTypeJavaType = new FullyQualifiedJavaType(exampleType);
+			daoSuperType.addTypeArgument(exampleTypeJavaType);
+			interfaze.addImportedType(exampleTypeJavaType);
+		}
         interfaze.addImportedType(baseModelJavaType);
         interfaze.addImportedType(daoSuperType);
         interfaze.addSuperInterface(daoSuperType);
@@ -133,9 +142,11 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
     }
 
     private void interceptExampleParam(Method method) {
-        method.getParameters().clear();
-        method.addParameter(new Parameter(new FullyQualifiedJavaType("E"), "example"));
-        methods.add(method);
+		if (isUseExample()) {
+			method.getParameters().clear();
+			method.addParameter(new Parameter(new FullyQualifiedJavaType("E"), "example"));
+			methods.add(method);
+		}
     }
 
     private void interceptPrimaryKeyParam(Method method) {
@@ -151,35 +162,41 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
     }
 
     private void interceptModelAndExampleParam(Method method) {
-        List<Parameter> parameters = method.getParameters();
-        if (parameters.size() == 1) {
-            interceptExampleParam(method);
-        }else{
-            method.getParameters().clear();
-            Parameter parameter1 = new Parameter(new FullyQualifiedJavaType("Model"), "record");
-            parameter1.addAnnotation("@Param(\"record\")");
-            method.addParameter(parameter1);
+		if (isUseExample()) {
+			List<Parameter> parameters = method.getParameters();
+			if (parameters.size() == 1) {
+				interceptExampleParam(method);
+			}else{
+				method.getParameters().clear();
+				Parameter parameter1 = new Parameter(new FullyQualifiedJavaType("Model"), "record");
+				parameter1.addAnnotation("@Param(\"record\")");
+				method.addParameter(parameter1);
 
-            Parameter parameter2 = new Parameter(new FullyQualifiedJavaType("E"), "example");
-            parameter2.addAnnotation("@Param(\"example\")");
-            method.addParameter(parameter2);
-            methods.add(method);
-        }
+				Parameter parameter2 = new Parameter(new FullyQualifiedJavaType("E"), "example");
+				parameter2.addAnnotation("@Param(\"example\")");
+				method.addParameter(parameter2);
+				methods.add(method);
+			}
+		}
     }
 
     @Override
     public boolean clientCountByExampleMethodGenerated(Method method,
                                                        Interface interfaze, IntrospectedTable introspectedTable) {
-//        interfaze
-        interceptExampleParam(method);
-        return false;
-    }
+//        interface
+		if (isUseExample()) {
+			interceptExampleParam(method);
+		}
+		return false;
+	}
 
 
     @Override
     public boolean clientDeleteByExampleMethodGenerated(Method method,
                                                         Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptExampleParam(method);
+        if (isUseExample()) {
+			interceptExampleParam(method);
+		}
         return false;
     }
 
@@ -187,7 +204,7 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
     @Override
     public boolean clientDeleteByPrimaryKeyMethodGenerated(Method method,
                                                            Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptPrimaryKeyParam(method);
+    	interceptPrimaryKeyParam(method);
         return false;
     }
 
@@ -201,23 +218,27 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
     @Override
     public boolean clientSelectByExampleWithBLOBsMethodGenerated(Method method,
                                                                  Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptExampleParam(method);
-        method.setReturnType(new FullyQualifiedJavaType("List<Model>"));
+        if (isUseExample()) {
+			interceptExampleParam(method);
+			method.setReturnType(new FullyQualifiedJavaType("List<Model>"));
+		}
         return false;
     }
 
     @Override
     public boolean clientSelectByExampleWithoutBLOBsMethodGenerated(Method method,
                                                                     Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptExampleParam(method);
-        method.setReturnType(new FullyQualifiedJavaType("List<Model>"));
+        if (isUseExample()) {
+			interceptExampleParam(method);
+			method.setReturnType(new FullyQualifiedJavaType("List<Model>"));
+		}
         return false;
     }
 
     @Override
     public boolean clientSelectByPrimaryKeyMethodGenerated(Method method,
                                                            Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptPrimaryKeyParam(method);
+    	interceptPrimaryKeyParam(method);
         method.setReturnType(new FullyQualifiedJavaType("Model"));
         return false;
     }
@@ -225,21 +246,27 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
     @Override
     public boolean clientUpdateByExampleSelectiveMethodGenerated(Method method,
                                                                  Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptModelAndExampleParam(method);
+        if (isUseExample()) {
+			interceptModelAndExampleParam(method);
+		}
         return false;
     }
 
     @Override
     public boolean clientUpdateByExampleWithBLOBsMethodGenerated(Method method,
                                                                  Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptModelAndExampleParam(method);
+        if (isUseExample()) {
+			interceptModelAndExampleParam(method);
+		}
         return false;
     }
 
     @Override
     public boolean clientUpdateByExampleWithoutBLOBsMethodGenerated(Method method,
                                                                     Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptModelAndExampleParam(method);
+        if (isUseExample()) {
+			interceptModelAndExampleParam(method);
+		}
         return false;
     }
 
@@ -252,20 +279,24 @@ public class CommonDAOInterfacePlugin extends PluginAdapter {
 
     @Override
     public boolean clientUpdateByExampleWithoutBLOBsMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
-        interceptModelAndExampleParam(method);
+        if (isUseExample()) {
+			interceptModelAndExampleParam(method);
+		}
         return false;
     }
 
     @Override
     public boolean clientUpdateByExampleSelectiveMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
-         interceptModelAndExampleParam(method);
+        if (isUseExample()) {
+			interceptModelAndExampleParam(method);
+		}
         return false;
     }
 
     @Override
     public boolean clientUpdateByPrimaryKeyWithBLOBsMethodGenerated(Method method,
                                                                     Interface interfaze, IntrospectedTable introspectedTable) {
-        interceptModelParam(method);
+    	interceptModelParam(method);
         return false;
     }
 
